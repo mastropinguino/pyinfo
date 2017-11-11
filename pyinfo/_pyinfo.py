@@ -3,10 +3,11 @@ import os
 import platform
 import socket
 import sys
+from collections import OrderedDict
 
 from . import renderers
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 optional_modules_list = [
     'Cookie',
@@ -29,6 +30,14 @@ for i in optional_modules_list:
 _PYTHON_MAJOR = sys.version_info[0]
 
 
+def try_exec(fn):
+    """Execute function and handles exceptions as error."""
+    try:
+        return fn()
+    except Exception as e:
+        return "Error: {}".format(repr(e))
+
+
 def imported(module):
     if module in sys.modules:
         return 'enabled'
@@ -36,7 +45,7 @@ def imported(module):
 
 
 def python_info():
-    data = dict()
+    data = OrderedDict()
     data['System information'] = collect_system_info()
     data['Python internals'] = collect_py_internals()
     data['OS internals'] = collect_os_internals()
@@ -56,7 +65,7 @@ def python_info():
 
 def collect_system_info():
     """Return system information."""
-    data = dict()
+    data = OrderedDict()
     data['Python version'] = platform.python_version()
     if hasattr(sys, 'subversion'):
         data['Python Subversion'] = ', '.join(sys.subversion)
@@ -81,7 +90,7 @@ def collect_system_info():
 
 def collect_py_internals():
     """Return python internal informations."""
-    data = dict()
+    data = OrderedDict()
     if hasattr(sys, 'builtin_module_names'):
         data['Built-in Modules'] = ', '.join(sys.builtin_module_names)
     data['Byte Order'] = sys.byteorder + ' endian'
@@ -103,30 +112,36 @@ def collect_py_internals():
 
 
 def collect_os_internals():
-    data = dict()
+    data = OrderedDict()
     if hasattr(os, 'getcwd'):
-        data['Current Working Directory'] = os.getcwd()
+        data['Current Working Directory'] = try_exec(os.getcwd)
+
     if hasattr(os, 'getegid'):
-        data['Effective Group ID'] = os.getegid()
+        data['Effective Group ID'] = try_exec(os.getegid)
+
     if hasattr(os, 'geteuid'):
-        data['Effective User ID'] = os.geteuid()
+        data['Effective User ID'] = try_exec(os.geteuid)
+
     if hasattr(os, 'getgid'):
-        data['Group ID'] = os.getgid()
+        data['Group ID'] = try_exec(os.getgid)
+
     if hasattr(os, 'getgroups'):
-        data['Group Membership'] = ', '.join(map(str, os.getgroups()))
+        data['Group Membership'] = try_exec(lambda: ', '.join(map(str, os.getgroups())))
+
     if hasattr(os, 'linesep'):
         data['Line Seperator'] = repr(os.linesep)[1:-1]
+
     if hasattr(os, 'getloadavg'):
-        data['Load Average'] = ', '.join(map(str, map(lambda x: round(x, 2), os.getloadavg())))
+        data['Load Average'] = try_exec(lambda: ', '.join(map(str, map(lambda x: round(x, 2), os.getloadavg()))))
+
     if hasattr(os, 'pathsep'):
         data['Path Seperator'] = os.pathsep
-    try:
-        if hasattr(os, 'getpid') and hasattr(os, 'getppid'):
-            data['Process ID'] = '{} (parent: {})'.format(os.getpid(), os.getppid())
-    except:
-        pass
+
+    if hasattr(os, 'getpid') and hasattr(os, 'getppid'):
+        data['Process ID'] = try_exec(lambda: '{} (parent: {})'.format(os.getpid(), os.getppid()))
+
     if hasattr(os, 'getuid'):
-        data['User ID'] = os.getuid()
+        data['User ID'] = try_exec(os.getuid)
     return data
 
 
@@ -136,7 +151,7 @@ def collect_environ():
     if _PYTHON_MAJOR > 2:
         envvars = list(envvars)
     envvars.sort()
-    data = dict()
+    data = OrderedDict()
     for envvar in envvars:
         data[envvar] = str(os.environ[envvar])
     return data
@@ -144,7 +159,7 @@ def collect_environ():
 
 def collect_database():
     """Return database support information."""
-    data = dict()
+    data = OrderedDict()
     data['DB2/Informix (ibm_db)'] = imported('ibm_db')
     data['MSSQL (adodbapi)'] = imported('adodbapi')
     data['MySQL (MySQL-Python)'] = imported('MySQLdb')
@@ -158,7 +173,7 @@ def collect_database():
 
 
 def collect_compression():
-    data = dict()
+    data = OrderedDict()
     data['Bzip2 Support'] = imported('bz2')
     data['Gzip Support'] = imported('gzip')
     data['Tar Support'] = imported('tarfile')
@@ -169,7 +184,7 @@ def collect_compression():
 
 def collect_ldap():
     """Return ldap module information."""
-    data = dict()
+    data = OrderedDict()
     data['Python-LDAP Version'] = ldap.__version__
     data['API Version'] = ldap.API_VERSION
     data['Default Protocol Version'] = ldap.VERSION
@@ -183,21 +198,14 @@ def collect_ldap():
 
 def collect_socket_info():
     """Return information available from socket library."""
-    data = dict()
-    try:
-        data['Hostname'] = socket.gethostname()
-    except Exception as e:
-        data['Hostname'] = 'Error: {}'.format(e)
+    data = OrderedDict()
+    data['Hostname'] = try_exec(socket.gethostname)
 
-    try:
-        hostname = socket.gethostbyaddr(socket.gethostname())[0]
-        data['Hostname (fully qualified)'] = hostname
-    except Exception as e:
-        data['Hostname (fully qualified)'] = 'Error: {}'.format(e)
-    try:
-        data['IP Address'] = socket.gethostbyname(socket.gethostname())
-    except Exception as e:
-        data['IP Address'] = 'Error: {}'.format(e)
+    hostname = try_exec(lambda: socket.gethostbyaddr(socket.gethostname())[0])
+    data['Hostname (fully qualified)'] = hostname
+
+    ip_addr = try_exec(lambda: socket.gethostbyname(socket.gethostname()))
+    data['IP Address'] = ip_addr
 
     data['IPv6 Support'] = getattr(socket, 'has_ipv6', False)
     data['SSL Support'] = hasattr(socket, 'ssl')
@@ -206,7 +214,7 @@ def collect_socket_info():
 
 def collect_multimedia_info():
     """Return multimedia related information."""
-    data = dict()
+    data = OrderedDict()
     data['AIFF Support'] = imported('aifc')
     data['Color System Conversion Support'] = ('colorsys')
     data['curses Support'] = imported('curses')

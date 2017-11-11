@@ -3,11 +3,10 @@ This library collect all the info for python environment you are running and opt
 It could be considered like a python equivalent of phpinfo for php language.
 
 
-
 ## Usage as standalone command
 ```bash
 
-~ # python -m pyinfo
+$ python -m pyinfo
 ============== System information ==============
      Python version: 3.6.3
          OS Version: Linux 4.13.11-1-ARCH
@@ -63,15 +62,22 @@ def application(environ, start_response):
     return [output]
 ```
 
+or using a wsgi capable webserver like gunicorn:
+
+```bash
+$ gunicorn pyinfo.wsgi
+```
+
 ## Mount into WSGI application
 
 Eg. using flask
 ```python
-# myapp.py
+# flask_example.py
 
 from flask import Flask
 
 app = Flask(__name__)
+
 
 @app.route('/pyinfo')
 def info():
@@ -79,15 +85,17 @@ def info():
     return pyinfo.info_as_html()
 ```
 
-# or in webapp2 app
-```python
-from webapp2 import WSGIApplication, Route
+# Installation
 
-app = WSGIApplication([
-  Route('/pyinfo', handler='pyinfo.wsgi')
-])
+```bash
+$ pip install pyinfo
 ```
 
+# Contributing
+
+Contributions are welcome. Submit via fork and pull request.
+
+If you're working on something major, shoot me a message beforehand
 
 # CREDITS
 
