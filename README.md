@@ -85,6 +85,18 @@ def info():
     return pyinfo.info_as_html()
 ```
 
+Even with webapp2
+
+```python
+# webapp2_example.py
+
+from webapp2 import Route, WSGIApplication
+
+APP = WSGIApplication([
+    Route('/pyinfo', handler='pyinfo.wsgi.application')
+])
+```
+
 # Installation
 
 ```bash
